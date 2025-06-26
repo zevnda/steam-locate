@@ -1,6 +1,6 @@
 {
   "name": "steam-locate",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Find Steam client installation location and apps across Windows, macOS, and Linux",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,8 @@
     "type-check": "tsc --noEmit",
     "prepare": "npm run build",
     "prepublishOnly": "npm run lint && npm run type-check && npm test && npm run build",
-    "release": "npm run prepublishOnly && npm publish",
+    "release": "standard-version",
+    "changelog": "standard-version --dry-run --skip.commit --skip.tag --skip.bump --skip.push",
     "main": "git checkout main && git pull && git fetch -p"
   },
   "keywords": [
@@ -72,8 +73,11 @@
     "nodemon": "^3.1.10",
     "prettier": "^3.6.1",
     "rimraf": "^6.0.1",
+    "standard-version": "^9.5.0",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@commitlint/cli": "^19.3.0",
+    "@commitlint/config-conventional": "^19.3.0"
   }
 }
