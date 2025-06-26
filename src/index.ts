@@ -74,10 +74,17 @@ export async function findSteamLocation(): Promise<SteamLocation> {
   const currentPlatform = platform() as SteamPlatform;
 
   try {
-    const steamPath = await findSteamPath();
+    let steamPath = await findSteamPath();
+    let libraryFolders = await getLibraryFolders(steamPath).catch(() => []);
+
+    // Normalize paths for Windows
+    if (currentPlatform === 'win32') {
+      steamPath = normalize(steamPath);
+      libraryFolders = libraryFolders.map((p: string) => normalize(p));
+    }
+
     const isRunning = await isSteamRunning();
     const version = await getSteamVersion(steamPath).catch(() => undefined);
-    const libraryFolders = await getLibraryFolders(steamPath).catch(() => []);
 
     return {
       path: steamPath,
@@ -106,10 +113,17 @@ export function findSteamLocationSync(): SteamLocation {
   const currentPlatform = platform() as SteamPlatform;
 
   try {
-    const steamPath = findSteamPathSync();
+    let steamPath = findSteamPathSync();
+    let libraryFolders = getLibraryFoldersSync(steamPath);
+
+    // Normalize paths for Windows
+    if (currentPlatform === 'win32') {
+      steamPath = normalize(steamPath);
+      libraryFolders = libraryFolders.map((p: string) => normalize(p));
+    }
+
     const isRunning = isSteamRunningSync();
     const version = getSteamVersionSync(steamPath);
-    const libraryFolders = getLibraryFoldersSync(steamPath);
 
     return {
       path: steamPath,
@@ -255,7 +269,8 @@ function findSteamPathWindows(): string {
 
     const pathMatch = regOutput.match(/(?:SteamPath|InstallPath)\s+REG_SZ\s+(.+)/);
     if (pathMatch && pathMatch[1]) {
-      const steamPath = pathMatch[1].trim().replace(/\\\\/g, '\\');
+      let steamPath = pathMatch[1].trim().replace(/\\\\/g, '\\');
+      steamPath = normalize(resolve(steamPath));
       if (existsSync(steamPath) && existsSync(resolve(steamPath, 'steam.exe'))) {
         return steamPath;
       }
@@ -272,7 +287,8 @@ function findSteamPathWindows(): string {
     resolve(process.env.APPDATA || '', 'Steam'),
   ];
 
-  for (const path of commonPaths) {
+  for (let path of commonPaths) {
+    path = normalize(path);
     if (existsSync(path) && existsSync(resolve(path, 'steam.exe'))) {
       return path;
     }
