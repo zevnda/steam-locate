@@ -8,9 +8,9 @@ updates:
       time: "09:00"
     open-pull-requests-limit: 10
     reviewers:
-      - "ProbablyRaging"
+      - "zevnda"
     assignees:
-      - "ProbablyRaging"
+      - "zevnda"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
