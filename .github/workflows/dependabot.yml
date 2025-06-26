@@ -55,9 +55,7 @@ jobs:
       if: success() && contains(github.event.pull_request.title, 'minor') && steps.dependency-type.outputs.type == 'production'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        PR_URL: ${{ github.event.pull_request.html_url }}
       run: |
         gh pr review --approve "${{ github.event.pull_request.number }}"
         gh pr comment "${{ github.event.pull_request.number }}" --body "✅ Tests passed! This minor update requires manual review before merging."
-      env:
-        PR_URL: ${{ github.event.pull_request.html_url }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
