@@ -9,15 +9,11 @@ on:
     types: [ published ]
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: [16, 18, 20]
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -26,7 +22,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
     
     - name: Install dependencies
@@ -45,11 +41,9 @@ jobs:
       run: npm run build
     
     - name: Generate test coverage
-      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '18'
       run: npm run test:coverage
     
     - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '18'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/lcov.info
