@@ -7,6 +7,7 @@ import {
   SteamNotFoundError,
   SteamAppNotFoundError,
 } from '../src/index';
+import { join } from 'path';
 
 // Mock child_process module
 jest.mock('child_process');
@@ -50,7 +51,7 @@ describe('steam-locate', () => {
       expect(result.path).toBe(steamPath);
       expect(result.platform).toBe('win32');
       expect(result.isRunning).toBe(false);
-      expect(result.libraryFolders).toEqual([`${steamPath}\\steamapps`]);
+      expect(result.libraryFolders).toEqual([join(steamPath, 'steamapps')]);
     });
 
     it('should find Steam on macOS', async () => {
