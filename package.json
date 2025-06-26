@@ -23,7 +23,8 @@
     "type-check": "tsc --noEmit",
     "prepare": "npm run build",
     "prepublishOnly": "npm run lint && npm run type-check && npm test && npm run build",
-    "release": "npm run prepublishOnly && npm publish"
+    "release": "npm run prepublishOnly && npm publish",
+    "main": "git checkout main && git pull && git fetch -p"
   },
   "keywords": [
     "steam",
