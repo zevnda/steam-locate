@@ -1,5 +1,14 @@
 dist/
+out/
 node_modules/
 coverage/
+public/
+
+.github
+pnpm-lock.yaml
 *.log
 .env*
+
+*.lock
+*.md
+*.mdx
