@@ -80,23 +80,32 @@ jobs:
         fi
         git push origin main
 
+    - name: Extract changelog for release
+      id: changelog
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        awk "/^##? \[?$VERSION/,/^##? /{if (!/^##? \[?$VERSION/) print last; print; last=\$0}" CHANGELOG.md | sed '$d' > RELEASE_CHANGELOG.md
+        echo 'changelog<<EOF' >> $GITHUB_OUTPUT
+        cat RELEASE_CHANGELOG.md >> $GITHUB_OUTPUT
+        echo 'EOF' >> $GITHUB_OUTPUT
+
     - name: Create GitHub Release
       uses: actions/github-script@v7
       with:
         script: |
           const tag = 'v${{ github.event.inputs.version }}';
           const isPrerelease = ${{ github.event.inputs.prerelease }};
-          
+          const fs = require('fs');
+          const changelog = fs.readFileSync('RELEASE_CHANGELOG.md', 'utf8');
           const release = await github.rest.repos.createRelease({
             owner: context.repo.owner,
             repo: context.repo.repo,
             tag_name: tag,
             name: `Release ${tag}`,
-            body: `Manual release ${tag}\n\nSee [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CHANGELOG.md) for details.`,
+            body: changelog,
             draft: false,
             prerelease: isPrerelease
           });
-          
           console.log(`Created release: ${release.data.html_url}`);
     
     - name: Publish to npm
