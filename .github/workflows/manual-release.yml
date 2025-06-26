@@ -51,7 +51,7 @@ jobs:
           exit 1
         fi
         echo "Version format is valid: $VERSION"
-    
+        
     # Run changelog automation and version bump
     - name: Generate changelog and bump version
       run: npm run release -- --release-as ${{ github.event.inputs.version }}
@@ -75,6 +75,7 @@ jobs:
           echo "Tag v$VERSION already exists, skipping tag creation."
         else
           git tag v$VERSION
+
           git push origin main --tags
         fi
         git push origin main
