@@ -79,8 +79,8 @@ export async function findSteamLocation(): Promise<SteamLocation> {
 
     // Normalize paths for Windows
     if (currentPlatform === 'win32') {
-      steamPath = normalize(resolve(steamPath));
-      libraryFolders = libraryFolders.map((p: string) => normalize(resolve(p)));
+      steamPath = normalize(steamPath);
+      libraryFolders = libraryFolders.map((p: string) => normalize(p));
     }
 
     const isRunning = await isSteamRunning();
@@ -118,8 +118,8 @@ export function findSteamLocationSync(): SteamLocation {
 
     // Normalize paths for Windows
     if (currentPlatform === 'win32') {
-      steamPath = normalize(resolve(steamPath));
-      libraryFolders = libraryFolders.map((p: string) => normalize(resolve(p)));
+      steamPath = normalize(steamPath);
+      libraryFolders = libraryFolders.map((p: string) => normalize(p));
     }
 
     const isRunning = isSteamRunningSync();
@@ -288,7 +288,7 @@ function findSteamPathWindows(): string {
   ];
 
   for (let path of commonPaths) {
-    path = normalize(resolve(path));
+    path = normalize(path);
     if (existsSync(path) && existsSync(resolve(path, 'steam.exe'))) {
       return path;
     }
