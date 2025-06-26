@@ -47,12 +47,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/steam-locate.git"
+    "url": "https://github.com/zevnda/steam-locate.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/steam-locate/issues"
+    "url": "https://github.com/zevnda/steam-locate/issues"
   },
-  "homepage": "https://github.com/yourusername/steam-locate#readme",
+  "homepage": "https://github.com/zevnda/steam-locate#readme",
   "publishConfig": {
     "access": "public"
   },
