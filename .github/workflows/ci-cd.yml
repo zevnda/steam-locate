@@ -95,3 +95,16 @@ jobs:
       run: |
         echo "Package validation successful!"
         echo "Ready for release when a tag is created."
+
+  commit-message-lint:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Lint commit messages
+      uses: wagoid/commitlint-github-action@v5
+      with:
+        configFile: commitlint.config.json

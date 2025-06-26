@@ -52,32 +52,33 @@ jobs:
         fi
         echo "Version format is valid: $VERSION"
     
-    - name: Update package version
-      run: |
-        VERSION="${{ github.event.inputs.version }}"
-        npm version $VERSION --no-git-tag-version --allow-same-version
-    
+    # Run changelog automation and version bump
+    - name: Generate changelog and bump version
+      run: npm run release -- --release-as ${{ github.event.inputs.version }}
+
     - name: Configure Git
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-    
-    - name: Commit version update
+
+    - name: Commit version and changelog update
       run: |
-        git add package.json package-lock.json
+        git add package.json package-lock.json CHANGELOG.md
         if git diff --cached --quiet; then
-          echo "No version changes to commit."
+          echo "No version or changelog changes to commit."
         else
-          git commit -m "chore: release v${{ github.event.inputs.version }}"
+          git commit -m "chore(release): v$(node -p \"require('./package.json').version\") [skip ci]"
         fi
         # Check if tag exists before creating it
-        if git rev-parse v${{ github.event.inputs.version }} >/dev/null 2>&1; then
-          echo "Tag v${{ github.event.inputs.version }} already exists, skipping tag creation."
+        VERSION=$(node -p "require('./package.json').version")
+        if git rev-parse v$VERSION >/dev/null 2>&1; then
+          echo "Tag v$VERSION already exists, skipping tag creation."
         else
-          git tag v${{ github.event.inputs.version }}
+          git tag v$VERSION
           git push origin main --tags
         fi
-    
+        git push origin main
+
     - name: Create GitHub Release
       uses: actions/github-script@v7
       with:
