@@ -269,8 +269,8 @@ function findSteamPathWindows(): string {
 
     const pathMatch = regOutput.match(/(?:SteamPath|InstallPath)\s+REG_SZ\s+(.+)/);
     if (pathMatch && pathMatch[1]) {
-      let steamPath = pathMatch[1].trim().replace(/\\\\/g, '\\');
-      steamPath = normalize(resolve(steamPath));
+      let steamPath = pathMatch[1].trim().replace(/\\/g, '\\');
+      steamPath = normalize(steamPath);
       if (existsSync(steamPath) && existsSync(resolve(steamPath, 'steam.exe'))) {
         return steamPath;
       }
