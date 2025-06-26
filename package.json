@@ -1,6 +1,6 @@
 {
   "name": "steam-locate",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Find Steam client installation location and apps across Windows, macOS, and Linux",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
