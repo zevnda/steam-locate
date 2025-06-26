@@ -22,7 +22,7 @@ on:
 
 jobs:
   version-bump:
-    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'version bump') && !contains(github.event.head_commit.message, 'chore:')"
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'version bump') && !contains(github.event.head_commit.message, 'chore:') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -68,8 +68,12 @@ jobs:
         if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
           echo "type=${{ github.event.inputs.version-type }}" >> $GITHUB_OUTPUT
         else
-          # Check commit messages since last tag for version bump indicators
-          COMMITS=$(git log --pretty=format:"%s" ${{ steps.last-tag.outputs.last-tag }}..HEAD)
+          # Check if last tag exists
+          if git rev-parse "${{ steps.last-tag.outputs.last-tag }}" >/dev/null 2>&1; then
+            COMMITS=$(git log --pretty=format:"%s" ${{ steps.last-tag.outputs.last-tag }}..HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+          fi
           echo "Analyzing commits: $COMMITS"
           
           if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|!:|breaking:)"; then
