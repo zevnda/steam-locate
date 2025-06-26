@@ -1,6 +1,6 @@
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, join, normalize } from 'path';
 import { platform, homedir } from 'os';
 
 /**
@@ -433,7 +433,7 @@ function getLibraryFoldersSync(steamPath: string): string[] {
     const libraryFolders: string[] = [];
 
     // Add main Steam apps folder
-    const mainAppsFolder = join(steamPath, 'steamapps');
+    const mainAppsFolder = normalize(join(steamPath, 'steamapps'));
     if (existsSync(mainAppsFolder)) {
       libraryFolders.push(mainAppsFolder);
     }
@@ -450,7 +450,7 @@ function getLibraryFoldersSync(steamPath: string): string[] {
           for (const match of pathMatches) {
             const pathMatch = match.match(/"path"\s*"([^"]+)"/);
             if (pathMatch && pathMatch[1]) {
-              const libraryPath = join(pathMatch[1].replace(/\\\\/g, '\\'), 'steamapps');
+              const libraryPath = normalize(join(pathMatch[1].replace(/\\\\/g, '\\'), 'steamapps'));
               if (existsSync(libraryPath) && !libraryFolders.includes(libraryPath)) {
                 libraryFolders.push(libraryPath);
               }
