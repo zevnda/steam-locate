@@ -1,0 +1,63 @@
+name: Dependabot Auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests
+      run: |
+        npm run lint
+        npm run type-check
+        npm test
+        npm run build
+    
+    - name: Check dependency type
+      id: dependency-type
+      run: |
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        if echo "$PR_TITLE" | grep -q "devDependencies"; then
+          echo "type=dev" >> $GITHUB_OUTPUT
+        else
+          echo "type=production" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Auto-approve and merge patch updates
+      if: success() && (contains(github.event.pull_request.title, 'patch') || steps.dependency-type.outputs.type == 'dev')
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh pr review --approve "${{ github.event.pull_request.number }}"
+        gh pr merge --auto --squash "${{ github.event.pull_request.number }}"
+    
+    - name: Auto-approve minor updates (but require manual merge)
+      if: success() && contains(github.event.pull_request.title, 'minor') && steps.dependency-type.outputs.type == 'production'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh pr review --approve "${{ github.event.pull_request.number }}"
+        gh pr comment "${{ github.event.pull_request.number }}" --body "✅ Tests passed! This minor update requires manual review before merging."
+      env:
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

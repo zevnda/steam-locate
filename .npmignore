@@ -1,0 +1,44 @@
+# Source files
+src/
+tests/
+*.test.ts
+*.spec.ts
+
+# Development files
+tsconfig.json
+jest.config.js
+.github/
+.vscode/
+
+# Build tools
+nodemon.json
+
+# Testing
+coverage/
+.nyc_output
+
+# Development dependencies
+node_modules/
+
+# Version control
+.git/
+.gitignore
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env*
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

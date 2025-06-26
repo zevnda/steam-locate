@@ -1,0 +1,179 @@
+name: Automated Version Bump
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+    inputs:
+      version-type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+
+jobs:
+  version-bump:
+    if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, 'version bump') && !contains(github.event.head_commit.message, 'chore:')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run tests to ensure quality
+      run: |
+        npm run lint
+        npm run type-check
+        npm test
+        npm run build
+    
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+    
+    - name: Get last tag
+      id: last-tag
+      run: |
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "last-tag=$LAST_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Determine version bump type
+      id: version-type
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "type=${{ github.event.inputs.version-type }}" >> $GITHUB_OUTPUT
+        else
+          # Check commit messages since last tag for version bump indicators
+          COMMITS=$(git log --pretty=format:"%s" ${{ steps.last-tag.outputs.last-tag }}..HEAD)
+          echo "Analyzing commits: $COMMITS"
+          
+          if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|!:|breaking:)"; then
+            echo "type=major" >> $GITHUB_OUTPUT
+            echo "Detected breaking changes, bumping major version"
+          elif echo "$COMMITS" | grep -qE "(feat:|feature:)"; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+            echo "Detected new features, bumping minor version"
+          elif echo "$COMMITS" | grep -qE "(fix:|bugfix:|perf:|docs:|style:|refactor:|test:)"; then
+            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "Detected fixes/improvements, bumping patch version"
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+            echo "No specific indicators found, defaulting to patch version"
+          fi
+        fi
+    
+    - name: Bump version
+      id: version
+      run: |
+        OLD_VERSION=$(node -p "require('./package.json').version")
+        echo "Current version: v$OLD_VERSION"
+        
+        NEW_VERSION=$(npm version ${{ steps.version-type.outputs.type }} --no-git-tag-version)
+        echo "new-version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version: $NEW_VERSION"
+        
+        # Update CHANGELOG.md
+        VERSION_NUMBER=${NEW_VERSION#v}
+        DATE=$(date +%Y-%m-%d)
+        
+        # Create new changelog entry
+        if [ -f "CHANGELOG.md" ]; then
+          # Backup original
+          cp CHANGELOG.md CHANGELOG.md.bak
+          
+          # Create new entry
+          {
+            head -n 3 CHANGELOG.md.bak
+            echo ""
+            echo "## [$VERSION_NUMBER] - $DATE"
+            echo ""
+            echo "### Changed"
+            echo "- Automated version bump from v$OLD_VERSION to $NEW_VERSION"
+            echo ""
+            tail -n +4 CHANGELOG.md.bak
+          } > CHANGELOG.md
+          
+          rm CHANGELOG.md.bak
+        fi
+    
+    - name: Commit and tag changes
+      run: |
+        git add package.json package-lock.json CHANGELOG.md
+        git commit -m "chore: version bump to ${{ steps.version.outputs.new-version }} [skip ci]"
+        git tag ${{ steps.version.outputs.new-version }}
+        git push origin main --tags
+    
+    - name: Create GitHub Release
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const tag = '${{ steps.version.outputs.new-version }}';
+          const versionNumber = tag.replace('v', '');
+          
+          let releaseBody = `## Release ${tag}\n\n`;
+          
+          try {
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const lines = changelog.split('\n');
+            let capturing = false;
+            let notes = [];
+            
+            for (const line of lines) {
+              if (line.startsWith('## [') && line.includes(versionNumber)) {
+                capturing = true;
+                continue;
+              }
+              if (capturing && line.startsWith('## [')) {
+                break;
+              }
+              if (capturing && line.trim()) {
+                notes.push(line);
+              }
+            }
+            
+            if (notes.length > 0) {
+              releaseBody += notes.join('\n');
+            }
+          } catch (error) {
+            releaseBody += 'Automated release - see CHANGELOG.md for details.';
+          }
+          
+          releaseBody += `\n\n## Installation\n\n\`\`\`bash\nnpm install steam-locate@${tag}\n\`\`\``;
+          
+          const release = await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: tag,
+            name: `Release ${tag}`,
+            body: releaseBody,
+            draft: false,
+            prerelease: false
+          });
+          
+          console.log(`Created release: ${release.data.html_url}`);

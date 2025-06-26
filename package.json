@@ -1,0 +1,78 @@
+{
+  "name": "steam-locate",
+  "version": "1.0.0",
+  "description": "Find Steam client installation location and apps across Windows, macOS, and Linux",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rimraf dist && tsc -p tsconfig.build.json",
+    "dev": "ts-node src/index.ts",
+    "example": "ts-node example.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts tests/**/*.ts --fix",
+    "format": "prettier --write src/**/*.ts tests/**/*.ts *.md *.json",
+    "format:check": "prettier --check src/**/*.ts tests/**/*.ts *.md *.json",
+    "type-check": "tsc --noEmit",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint && npm run type-check && npm test && npm run build",
+    "release": "npm run prepublishOnly && npm publish"
+  },
+  "keywords": [
+    "steam",
+    "location",
+    "finder",
+    "windows",
+    "macos",
+    "linux",
+    "registry",
+    "installation",
+    "path",
+    "gaming",
+    "valve",
+    "apps",
+    "games",
+    "library",
+    "cross-platform"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/steam-locate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/steam-locate/issues"
+  },
+  "homepage": "https://github.com/yourusername/steam-locate#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.29.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.4",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.1",
+    "jest": "^30.0.3",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.1",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  }
+}

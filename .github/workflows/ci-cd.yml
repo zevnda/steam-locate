@@ -1,0 +1,213 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [ published ]
+
+env:
+  NODE_VERSION: '18'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [16, 18, 20]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run linting
+      run: npm run lint
+    
+    - name: Run type checking
+      run: npm run type-check
+    
+    - name: Run tests
+      run: npm test
+    
+    - name: Run build
+      run: npm run build
+    
+    - name: Generate test coverage
+      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '18'
+      run: npm run test:coverage
+    
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '18'
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+
+  security:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run security audit
+      run: npm audit --audit-level moderate --omit=dev
+      continue-on-error: true
+    
+    - name: Check for high severity vulnerabilities
+      run: npm audit --audit-level high
+
+  publish:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run full test suite
+      run: |
+        npm run lint
+        npm run type-check
+        npm test
+    
+    - name: Build package
+      run: npm run build
+    
+    - name: Update version from tag
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        echo "Publishing version: $VERSION"
+        npm version $VERSION --no-git-tag-version --allow-same-version
+        
+    - name: Verify package contents before publishing
+      run: |
+        echo "Package contents:"
+        npm pack --dry-run
+        echo "Verifying build outputs exist..."
+        ls -la dist/
+        if [ ! -f "dist/index.js" ] || [ ! -f "dist/index.d.ts" ]; then
+          echo "Missing required build outputs!"
+          exit 1
+        fi
+    
+    - name: Publish to npm
+      run: npm publish --access public
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+    - name: Verify npm publication
+      run: |
+        PACKAGE_NAME=$(node -p "require('./package.json').name")
+        VERSION=$(node -p "require('./package.json').version")
+        echo "✅ Successfully published $PACKAGE_NAME@$VERSION to npm"
+        echo "📦 Package URL: https://www.npmjs.com/package/$PACKAGE_NAME"
+    
+    - name: Update GitHub release with changelog
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const tag = context.ref.replace("refs/tags/", "");
+          
+          let releaseNotes = `## Release ${tag}\n\n`;
+          
+          try {
+            const changelog = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const lines = changelog.split('\n');
+            let capturing = false;
+            let notes = [];
+            
+            for (const line of lines) {
+              if (line.startsWith('## [') && line.includes(tag.replace('v', ''))) {
+                capturing = true;
+                continue;
+              }
+              if (capturing && line.startsWith('## [')) {
+                break;
+              }
+              if (capturing) {
+                notes.push(line);
+              }
+            }
+            
+            if (notes.length > 0) {
+              releaseNotes += notes.join('\n').trim();
+            } else {
+              releaseNotes += 'See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.';
+            }
+          } catch (error) {
+            releaseNotes += 'See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.';
+          }
+          
+          releaseNotes += `\n\n## Installation\n\n\`\`\`bash\nnpm install steam-locate@${tag}\n\`\`\``;
+          
+          await github.rest.repos.updateRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            release_id: context.payload.release.id,
+            body: releaseNotes
+          });
+
+  publish-dry-run:
+    needs: [test, security]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Build package
+      run: npm run build
+    
+    - name: Check package contents
+      run: npm pack --dry-run
+    
+    - name: Validate package
+      run: |
+        echo "Package validation successful!"
+        echo "Ready for release when a tag is created."

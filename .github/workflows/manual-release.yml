@@ -1,0 +1,116 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.2.3)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run full test suite
+      run: |
+        npm run lint
+        npm run type-check
+        npm test
+        npm run build
+    
+    - name: Validate version format
+      run: |
+        VERSION="${{ github.event.inputs.version }}"
+        if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+          echo "Invalid version format. Expected: v1.2.3 or v1.2.3-beta.1"
+          exit 1
+        fi
+        echo "Version format is valid: $VERSION"
+    
+    - name: Update package version
+      run: |
+        VERSION="${{ github.event.inputs.version }}"
+        VERSION_NUMBER=${VERSION#v}
+        npm version $VERSION_NUMBER --no-git-tag-version --allow-same-version
+    
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+    
+    - name: Commit version update
+      run: |
+        git add package.json package-lock.json
+        git commit -m "chore: release ${{ github.event.inputs.version }}"
+        git tag ${{ github.event.inputs.version }}
+        git push origin main --tags
+    
+    - name: Create GitHub Release
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const tag = '${{ github.event.inputs.version }}';
+          const isPrerelease = ${{ github.event.inputs.prerelease }};
+          
+          const release = await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: tag,
+            name: `Release ${tag}`,
+            body: `Manual release ${tag}\n\nSee [CHANGELOG.md](https://github.com/${context.repo.owner}/${context.repo.repo}/blob/main/CHANGELOG.md) for details.`,
+            draft: false,
+            prerelease: isPrerelease
+          });
+          
+          console.log(`Created release: ${release.data.html_url}`);
+    
+    - name: Publish to npm
+      run: |
+        if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+          npm publish --tag beta --access public
+          echo "✅ Published as beta release"
+        else
+          npm publish --access public
+          echo "✅ Published as stable release"
+        fi
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        
+    - name: Verify npm publication
+      run: |
+        PACKAGE_NAME=$(node -p "require('./package.json').name")
+        VERSION=$(node -p "require('./package.json').version")
+        echo "📦 Published $PACKAGE_NAME@$VERSION"
+        echo "🔗 Package URL: https://www.npmjs.com/package/$PACKAGE_NAME"
+    
+    - name: Post-release summary
+      run: |
+        echo "🎉 Release completed successfully!"
+        echo "📦 Published ${{ github.event.inputs.version }} to npm"
+        echo "🏷️ Created GitHub release"
+        echo "📝 Check: https://www.npmjs.com/package/steam-locate"
