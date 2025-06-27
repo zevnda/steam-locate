@@ -51,15 +51,14 @@ jobs:
           exit 1
         fi
         echo "Version format is valid: $VERSION"
-        
-    # Run changelog automation and version bump
-    - name: Generate changelog and bump version
-      run: npm run release -- --release-as ${{ github.event.inputs.version }}
 
     - name: Configure Git
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+    - name: Generate changelog and bump version
+      run: npm run release -- --release-as ${{ github.event.inputs.version }}
 
     - name: Commit version and changelog update
       run: |
