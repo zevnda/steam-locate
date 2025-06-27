@@ -4,8 +4,6 @@ All notable changes to this project will be documented in this file. See [standa
 
 ### [1.0.3](https://github.com/zevnda/steam-locate/compare/v1.0.2...v1.0.3) (2025-06-27)
 
-### [1.0.3](https://github.com/zevnda/steam-locate/compare/v1.0.2...v1.0.3) (2025-06-26)
-
 ## [1.0.2] - 2025-06-26
 
 ### Changed

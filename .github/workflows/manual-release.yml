@@ -85,9 +85,9 @@ jobs:
       run: |
         VERSION=$(node -p "require('./package.json').version")
         awk "/^##? \[?$VERSION/,/^##? /{if (!/^##? \[?$VERSION/) print last; print; last=\$0}" CHANGELOG.md | sed '$d' > RELEASE_CHANGELOG.md
-        echo 'changelog<<EOF' >> $GITHUB_OUTPUT
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
         cat RELEASE_CHANGELOG.md >> $GITHUB_OUTPUT
-        echo 'EOF' >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
 
     - name: Create GitHub Release
       uses: actions/github-script@v7
@@ -95,8 +95,7 @@ jobs:
         script: |
           const tag = 'v${{ github.event.inputs.version }}';
           const isPrerelease = ${{ github.event.inputs.prerelease }};
-          const fs = require('fs');
-          const changelog = fs.readFileSync('RELEASE_CHANGELOG.md', 'utf8');
+          const changelog = process.env['CHANGELOG'] || '';
           const release = await github.rest.repos.createRelease({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -107,6 +106,8 @@ jobs:
             prerelease: isPrerelease
           });
           console.log(`Created release: ${release.data.html_url}`);
+      env:
+        CHANGELOG: ${{ steps.changelog.outputs.changelog }}
     
     - name: Publish to npm
       run: |
