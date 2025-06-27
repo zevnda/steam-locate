@@ -66,7 +66,8 @@ jobs:
         if git diff --cached --quiet; then
           echo "No version or changelog changes to commit."
         else
-          git commit -m "chore(release): v$(node -p \"require('./package.json').version\") [skip ci]"
+          VERSION=$(node -p "require('./package.json').version")
+          git commit -m "chore(release): v$VERSION [skip ci]"
         fi
         # Check if tag exists before creating it
         VERSION=$(node -p "require('./package.json').version")
