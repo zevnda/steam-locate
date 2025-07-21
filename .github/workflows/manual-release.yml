@@ -13,8 +13,6 @@ on:
         default: false
         type: boolean
 
-run-name: Release v${{ github.event.inputs.version }}
-
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -54,34 +52,19 @@ jobs:
         fi
         echo "Version format is valid: $VERSION"
 
-    - name: Get previous version for comparison
-      id: previous_version
-      run: |
-        # Get the latest tag
-        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        if [ -z "$LATEST_TAG" ]; then
-          echo "No previous tags found"
-          echo "previous_tag=" >> $GITHUB_OUTPUT
-          echo "has_previous=false" >> $GITHUB_OUTPUT
-        else
-          echo "previous_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-          echo "has_previous=true" >> $GITHUB_OUTPUT
-          echo "Previous version found: $LATEST_TAG"
-        fi
-
     - name: Configure Git
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         
-    - name: Generate changelog and bump version
-      run: npm run release -- --release-as ${{ github.event.inputs.version }}
+    - name: Bump version
+      run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
 
-    - name: Commit version and changelog update
+    - name: Commit version update
       run: |
-        git add package.json package-lock.json CHANGELOG.md
+        git add package.json package-lock.json
         if git diff --cached --quiet; then
-          echo "No version or changelog changes to commit."
+          echo "No version changes to commit."
         else
           VERSION=$(node -p "require('./package.json').version")
           git commit -m "chore(release): v$VERSION [skip ci]"
@@ -92,51 +75,10 @@ jobs:
           echo "Tag v$VERSION already exists, skipping tag creation."
         else
           git tag v$VERSION
+
           git push origin main --tags
         fi
         git push origin main
-
-    - name: Extract changelog for release
-      id: changelog
-      run: |
-        VERSION=$(node -p "require('./package.json').version")
-        awk "/^##? \[?$VERSION/,/^##? /{if (!/^##? \[?$VERSION/) print last; print; last=\$0}" CHANGELOG.md | sed '$d' > RELEASE_CHANGELOG.md
-        {
-          echo "changelog<<EOF"
-          cat RELEASE_CHANGELOG.md
-          echo "EOF"
-        } >> $GITHUB_OUTPUT
-
-    - name: Generate commit comparison
-      id: comparison
-      run: |
-        NEW_VERSION="v${{ github.event.inputs.version }}"
-        PREVIOUS_TAG="${{ steps.previous_version.outputs.previous_tag }}"
-        HAS_PREVIOUS="${{ steps.previous_version.outputs.has_previous }}"
-
-        if [ "$HAS_PREVIOUS" = "true" ]; then
-          {
-            echo "## 📋 Changes"
-            echo ""
-            echo "**Full Changelog:** https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${NEW_VERSION}"
-            echo ""
-            echo "### Commits in this release:"
-            git log ${PREVIOUS_TAG}..HEAD --oneline --pretty=format:"- %s (%h)"
-          } > COMMITS.md
-          {
-            echo "commits<<EOF"
-            cat COMMITS.md
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-        else
-          {
-            echo "commits<<EOF"
-            echo "## 📋 Changes"
-            echo ""
-            echo "🎉 This is the first release!"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
-        fi
 
     - name: Create GitHub Release
       uses: actions/github-script@v7
@@ -144,25 +86,16 @@ jobs:
         script: |
           const tag = 'v${{ github.event.inputs.version }}';
           const isPrerelease = ${{ github.event.inputs.prerelease }};
-          const changelog = process.env['CHANGELOG'] || '';
-          const commits = process.env['COMMITS'] || '';
-          
-          // Combine changelog and commit comparison
-          const releaseBody = changelog + '\n\n' + commits;
-          
           const release = await github.rest.repos.createRelease({
             owner: context.repo.owner,
             repo: context.repo.repo,
             tag_name: tag,
             name: `Release ${tag}`,
-            body: releaseBody,
+            body: '',
             draft: false,
             prerelease: isPrerelease
           });
           console.log(`Created release: ${release.data.html_url}`);
-      env:
-        CHANGELOG: ${{ steps.changelog.outputs.changelog }}
-        COMMITS: ${{ steps.comparison.outputs.commits }}
     
     - name: Publish to npm
       run: |
@@ -187,5 +120,10 @@ jobs:
       run: |
         echo "🎉 Release completed successfully!"
         echo "📦 Published v${{ github.event.inputs.version }} to npm"
-        echo "🏷️ Created GitHub release with commit comparison"
+        echo "🏷️ Created GitHub release"
         echo "📝 Check: https://www.npmjs.com/package/steam-locate"
+        echo "📝 Check: https://www.npmjs.com/package/steam-locate"
+        PACKAGE_NAME=$(node -p "require('./package.json').name")
+        VERSION=$(node -p "require('./package.json').version")
+        echo "📦 Published $PACKAGE_NAME@$VERSION"
+        echo "🔗 Package URL: https://www.npmjs.com/package/$PACKAGE_NAME"
