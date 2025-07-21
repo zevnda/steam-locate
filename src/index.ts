@@ -570,6 +570,8 @@ async function getInstalledSteamAppsFromLibraries(libraryFolders: string[]): Pro
  */
 function getInstalledSteamAppsFromLibrariesSync(libraryFolders: string[]): SteamApp[] {
   const apps: SteamApp[] = [];
+  const seen = new Set<string>();
+  const isWin = platform() === 'win32';
 
   for (const libraryFolder of libraryFolders) {
     try {
@@ -581,8 +583,14 @@ function getInstalledSteamAppsFromLibrariesSync(libraryFolders: string[]): Steam
             const appId = file.match(/appmanifest_(\d+)\.acf/)?.[1];
             if (appId) {
               const app = findSteamAppInLibrariesSync(appId, [libraryFolder], '');
-              if (app.isInstalled) {
-                apps.push(app);
+              if (app.isInstalled && app.installDir) {
+                // Normalize path for deduplication
+                let key = app.appId + '|' + normalize(app.installDir);
+                if (isWin) key = key.toLowerCase();
+                if (!seen.has(key)) {
+                  seen.add(key);
+                  apps.push(app);
+                }
               }
             }
           } catch {
