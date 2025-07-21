@@ -13,6 +13,8 @@ on:
         default: false
         type: boolean
 
+run-name: Release v${{ github.event.inputs.version }}
+
 jobs:
   release:
     runs-on: ubuntu-latest
