@@ -101,9 +101,11 @@ jobs:
       run: |
         VERSION=$(node -p "require('./package.json').version")
         awk "/^##? \[?$VERSION/,/^##? /{if (!/^##? \[?$VERSION/) print last; print; last=\$0}" CHANGELOG.md | sed '$d' > RELEASE_CHANGELOG.md
-        echo "changelog<<EOF" >> $GITHUB_OUTPUT
-        cat RELEASE_CHANGELOG.md >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        {
+          echo "changelog<<EOF"
+          cat RELEASE_CHANGELOG.md
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
 
     - name: Generate commit comparison
       id: comparison
@@ -111,31 +113,29 @@ jobs:
         NEW_VERSION="v${{ github.event.inputs.version }}"
         PREVIOUS_TAG="${{ steps.previous_version.outputs.previous_tag }}"
         HAS_PREVIOUS="${{ steps.previous_version.outputs.has_previous }}"
-        
+
         if [ "$HAS_PREVIOUS" = "true" ]; then
-          echo "## 📋 Changes"
-          echo ""
-          echo "**Full Changelog:** https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${NEW_VERSION}"
-          echo ""
-          echo "### Commits in this release:"
-          
-          # Get commit messages between tags
-          git log ${PREVIOUS_TAG}..HEAD --oneline --pretty=format:"- %s (%h)" > COMMITS.md
-          
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "## 📋 Changes" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "**Full Changelog:** https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${NEW_VERSION}" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "### Commits in this release:" >> $GITHUB_OUTPUT
-          cat COMMITS.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "## 📋 Changes"
+            echo ""
+            echo "**Full Changelog:** https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${NEW_VERSION}"
+            echo ""
+            echo "### Commits in this release:"
+            git log ${PREVIOUS_TAG}..HEAD --oneline --pretty=format:"- %s (%h)"
+          } > COMMITS.md
+          {
+            echo "commits<<EOF"
+            cat COMMITS.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
         else
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "## 📋 Changes" >> $GITHUB_OUTPUT
-          echo "" >> $GITHUB_OUTPUT
-          echo "🎉 This is the first release!" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "commits<<EOF"
+            echo "## 📋 Changes"
+            echo ""
+            echo "🎉 This is the first release!"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
         fi
 
     - name: Create GitHub Release
