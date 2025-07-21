@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.4](https://github.com/zevnda/steam-locate/compare/v1.0.3...v1.0.4) (2025-07-21)
+
+
+### Bug Fixes
+
+* correct changelog output handling in manual release workflow ([#21](https://github.com/zevnda/steam-locate/issues/21)) ([f07b863](https://github.com/zevnda/steam-locate/commit/f07b863b8aa246baa25fb94c1a19c1b467e05f49))
+
 ### [1.0.3](https://github.com/zevnda/steam-locate/compare/v1.0.2...v1.0.3) (2025-06-27)
 
 ## [1.0.2] - 2025-06-26
