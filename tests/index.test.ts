@@ -7,7 +7,7 @@ import {
   SteamNotFoundError,
   SteamAppNotFoundError,
 } from '../src/index';
-import { join } from 'path';
+import { join, normalize } from 'path';
 
 // Mock child_process module
 jest.mock('child_process');
@@ -56,8 +56,7 @@ describe('steam-locate', () => {
 
     it('should find Steam on macOS', async () => {
       mockPlatform.mockReturnValue('darwin');
-      // On Windows, path.normalize will convert to backslashes
-      const steamPath = 'C:\\home\\user\\Library\\Application Support\\Steam';
+      const steamPath = '/home/user/Library/Application Support/Steam';
 
       mockExecSync.mockReturnValue('');
       mockExistsSync.mockReturnValueOnce(true); // Steam path exists
@@ -66,14 +65,13 @@ describe('steam-locate', () => {
 
       const result = await findSteamLocation();
 
-      expect(result.path).toBe(steamPath);
+      expect(normalize(result.path)).toBe(normalize(steamPath));
       expect(result.platform).toBe('darwin');
     });
 
     it('should find Steam on Linux', async () => {
       mockPlatform.mockReturnValue('linux');
-      // On Windows, path.normalize will convert to backslashes
-      const steamPath = 'C:\\home\\user\\.var\\app\\com.valvesoftware.Steam\\.local\\share\\Steam';
+      const steamPath = '/home/user/.var/app/com.valvesoftware.Steam/.local/share/Steam';
 
       mockExecSync.mockReturnValueOnce(''); // pgrep for running check
 
@@ -84,7 +82,7 @@ describe('steam-locate', () => {
 
       const result = await findSteamLocation();
 
-      expect(result.path).toBe(steamPath);
+      expect(normalize(result.path)).toBe(normalize(steamPath));
       expect(result.platform).toBe('linux');
     });
 
