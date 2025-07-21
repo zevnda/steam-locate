@@ -85,13 +85,29 @@ jobs:
       with:
         script: |
           const tag = 'v${{ github.event.inputs.version }}';
+          // Get previous tag (sorted by version, descending)
+          const { data: tags } = await github.rest.repos.listTags({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            per_page: 2
+          });
+          let previousTag = null;
+          if (tags.length > 1) {
+            previousTag = tags[1].name;
+          }
+          const compareLink = previousTag
+            ? `https://github.com/${context.repo.owner}/${context.repo.repo}/compare/${previousTag}...${tag}`
+            : null;
+          const body = compareLink
+            ? `[View all changes in this release](${compareLink})`
+            : '';
           const isPrerelease = ${{ github.event.inputs.prerelease }};
           const release = await github.rest.repos.createRelease({
             owner: context.repo.owner,
             repo: context.repo.repo,
             tag_name: tag,
             name: `Release ${tag}`,
-            body: '',
+            body,
             draft: false,
             prerelease: isPrerelease
           });
