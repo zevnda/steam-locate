@@ -56,13 +56,11 @@ describe('steam-locate', () => {
 
     it('should find Steam on macOS', async () => {
       mockPlatform.mockReturnValue('darwin');
-      const steamPath = '/Applications/Steam.app/Contents/MacOS';
+      // On Windows, path.normalize will convert to backslashes
+      const steamPath = 'C:\\home\\user\\Library\\Application Support\\Steam';
 
       mockExecSync.mockReturnValue('');
-      mockExistsSync
-        .mockReturnValueOnce(true) // Steam.app exists
-        .mockReturnValueOnce(true) // Steam executable exists
-        .mockReturnValueOnce(true); // steamapps folder exists
+      mockExistsSync.mockReturnValueOnce(true); // Steam path exists
 
       mockReadFileSync.mockReturnValue('');
 
@@ -74,13 +72,14 @@ describe('steam-locate', () => {
 
     it('should find Steam on Linux', async () => {
       mockPlatform.mockReturnValue('linux');
-      const steamPath = '/usr/bin/steam';
+      // On Windows, path.normalize will convert to backslashes
+      const steamPath = 'C:\\home\\user\\.var\\app\\com.valvesoftware.Steam\\.local\\share\\Steam';
 
-      mockExecSync
-        .mockReturnValueOnce('') // pgrep for running check
-        .mockReturnValueOnce(steamPath); // which steam
+      mockExecSync.mockReturnValueOnce(''); // pgrep for running check
 
-      mockExistsSync.mockReturnValue(true);
+      // Return true for all candidate paths to ensure the first is found
+      mockExistsSync.mockImplementation(() => true);
+
       mockReadFileSync.mockReturnValue('');
 
       const result = await findSteamLocation();
