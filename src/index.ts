@@ -301,27 +301,11 @@ function findSteamPathWindows(): string {
  * Find Steam on macOS
  */
 function findSteamPathMacOS(): string {
-  const commonPaths = [
-    '/Applications/Steam.app/Contents/MacOS',
-    resolve(homedir(), 'Applications/Steam.app/Contents/MacOS'),
-    '/usr/local/bin/steam',
-    '/opt/homebrew/bin/steam',
-  ];
-
-  for (const path of commonPaths) {
-    if (existsSync(path)) {
-      // For .app bundles, check for the Steam executable
-      if (path.includes('Steam.app')) {
-        const steamExecutable = join(path, 'Steam');
-        if (existsSync(steamExecutable)) {
-          return path;
-        }
-      } else if (existsSync(path)) {
-        return path;
-      }
-    }
+  // Always use $HOME/Library/Application Support/Steam
+  const steamPath = resolve(homedir(), 'Library/Application Support/Steam');
+  if (existsSync(steamPath)) {
+    return steamPath;
   }
-
   throw new SteamNotFoundError('Could not locate Steam installation on macOS');
 }
 
@@ -329,31 +313,34 @@ function findSteamPathMacOS(): string {
  * Find Steam on Linux
  */
 function findSteamPathLinux(): string {
-  const commonPaths = [
-    '/usr/bin/steam',
-    '/usr/local/bin/steam',
-    '/opt/steam',
-    resolve(homedir(), '.steam/steam'),
-    resolve(homedir(), '.local/share/Steam'),
-    '/usr/games/steam',
-    '/snap/steam/current',
+  const home = homedir();
+  const snapDir = process.env.SNAP_USER_DATA
+    ? resolve(process.env.SNAP_USER_DATA)
+    : resolve(home, 'snap');
+
+  const candidatePaths = [
+    // Flatpak
+    resolve(home, '.var/app/com.valvesoftware.Steam/.local/share/Steam'),
+    resolve(home, '.var/app/com.valvesoftware.Steam/.steam/steam'),
+    resolve(home, '.var/app/com.valvesoftware.Steam/.steam/root'),
+    // Standard
+    resolve(home, '.local/share/Steam'),
+    resolve(home, '.steam/steam'),
+    resolve(home, '.steam/root'),
+    resolve(home, '.steam/debian-installation'),
+    // Snap
+    resolve(snapDir, 'steam/common/.local/share/Steam'),
+    resolve(snapDir, 'steam/common/.steam/steam'),
+    resolve(snapDir, 'steam/common/.steam/root'),
   ];
 
-  for (const path of commonPaths) {
-    if (existsSync(path)) {
+  // Deduplicate and return the first existing directory
+  const seen = new Set<string>();
+  for (const path of candidatePaths) {
+    if (!seen.has(path) && existsSync(path)) {
+      seen.add(path);
       return path;
     }
-  }
-
-  // Try to find via which command
-  try {
-    const whichOutput = execSync('which steam', { encoding: 'utf8', timeout: 5000 });
-    const steamPath = whichOutput.trim();
-    if (steamPath && existsSync(steamPath)) {
-      return steamPath;
-    }
-  } catch {
-    // which command failed
   }
 
   throw new SteamNotFoundError('Could not locate Steam installation on Linux');
